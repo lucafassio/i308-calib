@@ -18,6 +18,33 @@ from i308_calib import capture
 from i308_calib.capture import get_capture_config, new_video_capture, ThreadedCapture
 
 
+# Pantalla hardcodeada: 2880x1800 fisicos con escalado de Windows al 200%,
+# o sea 1440x900 logicos. Las ventanas de OpenCV son DPI-unaware: un frame de
+# 1920 px de ancho se dibuja a 3840 px fisicos y queda cortado. Por eso el
+# preview se escala contra la resolucion logica y no contra la fisica.
+SCREEN_WIDTH = 2880
+SCREEN_HEIGHT = 1800
+SCREEN_SCALING = 2.0
+
+# margen para barra de titulo / taskbar
+SCREEN_MARGIN = 0.9
+
+
+def fit_to_screen(image):
+    """Escala image para que la ventana entre en la pantalla (nunca agranda)."""
+    h, w = image.shape[:2]
+
+    max_w = (SCREEN_WIDTH / SCREEN_SCALING) * SCREEN_MARGIN
+    max_h = (SCREEN_HEIGHT / SCREEN_SCALING) * SCREEN_MARGIN
+
+    scale = min(max_w / w, max_h / h, 1.0)
+
+    if scale == 1.0:
+        return image
+
+    return cv2.resize(image, (int(w * scale), int(h * scale)))
+
+
 def parse_args():
     epilog = """
 
@@ -472,7 +499,7 @@ def start(args):
             # show_img_left = np.zeros_like(show_img_left)
             show_img = np.hstack((show_img_left, show_img_right))
 
-            show_img = cv2.resize(show_img, (int(w / 2), int(h / 2)))
+            show_img = fit_to_screen(show_img)
             cv2.imshow("stereo", show_img)
 
             sleep = 1
